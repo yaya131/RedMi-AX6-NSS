@@ -6,53 +6,103 @@
 #
 # https://github.com/P3TERX/Actions-OpenWrt
 # File: .github/workflows/update-checker.yml
-# Description: Source code update checker
+# Description: 
+#  Check multiple repos to see if there is an update, if so, 
+#  send corresponding repository_dispatch event to trigger certain Github actions
 #
 
 name: Update Checker
 
-env:
-  REPO_URL: https://github.com/coolsnowwolf/lede
-  REPO_BRANCH: master
-
 on:
   workflow_dispatch:
-#  schedule:
-#    - cron: 0 */18 * * *
+  schedule:
+    - cron: 30 18 * * *
 
 jobs:
-  check:
+  Check:
     runs-on: ubuntu-latest
-
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        REPO: [sdf8057/ipq6000, hanwckf/immortalwrt-mt798x, immortalwrt/immortalwrt, ophub/kernel, bitthief/openwrt]
+        
     steps:
+      - name: Check All Code Bases
+        id: check
+        env:
+          REPO: ${{ matrix.REPO }}
+        run: |
+          export REPO_USER="$(echo $REPO | awk -F '/' '{print $1}')"
+          echo "REPO_USER=$REPO_USER" >> $GITHUB_ENV
+          
+          export REPO_NAME="$(echo $REPO | awk -F '/' '{print $2}')"
+          echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
+          
+          export SDF8057_BRANCH="main"
+          export HANWCKF_BRANCH="openwrt-21.02"
+          export IMMORTALWRT_BRANCH="master"
+          export OPHUB_BRANCH="main"
+          export BITTHIEF_BRANCH="master"
+          
+          if [ $REPO_USER == sdf8057 ]
+          then
+            export BRANCH=$SDF8057_BRANCH
+          elif [ $REPO_USER == hanwckf ]
+          then
+            export BRANCH=$HANWCKF_BRANCH
+          elif [ $REPO_USER == ophub ]
+          then
+            export BRANCH=$OPHUB_BRANCH
+          elif [ $REPO_USER == bitthief ]
+          then
+            export BRANCH=$BITTHIEF_BRANCH
+          else
+            export BRANCH=$IMMORTALWRT_BRANCH
+          fi
+          
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+          
+      - name: Get Commit Hash
+        id: getHash
+        run: |
+          git clone --depth=1 "https://github.com/${{env.REPO_USER}}/${{env.REPO_NAME}}" -b ${{env.BRANCH}} openwrt
+          cd openwrt
+          echo "commitHash=$(git rev-parse HEAD)" >> $GITHUB_ENV
+          
+          mkdir ~/.cache
+          echo "$(git rev-parse HEAD)" > ~/.cache/${{ env.REPO_USER }}-commitHash
 
-    - name: Get Commit Hash
-      id: getHash
-      run: |
-        git clone --depth 1 $REPO_URL -b $REPO_BRANCH .
-        echo "::set-output name=commitHash::$(git rev-parse HEAD)"
+      - name: Compare Commit Hash
+        id: cacheHash
+        uses: actions/cache/restore@main
+        with:
+          path: ~/.cache/${{ env.REPO_USER }}-commitHash
+          key: HEAD-${{ env.commitHash }}
 
-    - name: Compare Commit Hash
-      id: cacheHash
-      uses: actions/cache@v2
-      with:
-        path: .commitHash
-        key: HEAD-${{ steps.getHash.outputs.commitHash }}
+      - name: Save New Commit Hash
+        if: steps.cacheHash.outputs.cache-hit != 'true'
+        uses: actions/cache/save@main
+        with:
+          path: ~/.cache/${{ env.REPO_USER }}-commitHash
+          key: HEAD-${{ env.commitHash }}
 
-    - name: Save New Commit Hash
-      if: steps.cacheHash.outputs.cache-hit != 'true'
-      run: |
-        echo ${{ steps.getHash.outputs.commitHash }} | tee .commitHash
-
-    - name: Trigger build
-      if: steps.cacheHash.outputs.cache-hit != 'true'
-      uses: peter-evans/repository-dispatch@v1
-      with:
-        token: ${{ secrets.ACTIONS_TRIGGER_PAT }}
-        event-type: Source Code Update
-
-    - name: Delete workflow runs
-      uses: GitRML/delete-workflow-runs@main
-      with:
-        retain_days: 1
-        keep_minimum_runs: 1
+      - name: Trigger build
+        if: steps.cacheHash.outputs.cache-hit != 'true'
+        uses: peter-evans/repository-dispatch@main
+        with:
+          token: ${{ secrets.ACTIONS_TRIGGER_PAT }}
+          event-type: "Source_Code_Update_${{ env.REPO_USER }}"
+          
+  Clean_up:
+    runs-on: ubuntu-latest
+    needs: Check
+    steps:
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@main
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 1
+          keep_minimum_runs: 1
+          delete_workflow_pattern: "Checker"
