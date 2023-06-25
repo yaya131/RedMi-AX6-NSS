@@ -10,7 +10,7 @@ name: Build AX6-NSS
 
 on:
   repository_dispatch:
-    types: [Source_Code_Update_bitthief, Package_Luci_Update]  
+    types: [Source_Code_Update_AgustinLorenzo, Package_Luci_Update]  
   workflow_dispatch:
     inputs:
       ssh:
@@ -21,10 +21,10 @@ on:
     - cron: '30 18 * * 5'
 
 env:
-  # REPO_URL: https://github.com/AgustinLorenzo/openwrt
-  # REPO_BRANCH: main
-  REPO_URL: https://github.com/bitthief/openwrt
-  REPO_BRANCH: master
+  REPO_URL: https://github.com/AgustinLorenzo/openwrt
+  REPO_BRANCH: main
+  # REPO_URL: https://github.com/bitthief/openwrt
+  # REPO_BRANCH: master
   FEEDS_CONF: AX6-NSS/feeds.conf.ecm
   CONFIG_FILE: AX6-NSS/AX6-NSS.config
   DIY_P1_SH: AX6-NSS/diy-part1.sh
