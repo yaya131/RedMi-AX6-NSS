@@ -37,6 +37,7 @@ CONFIG_PACKAGE_luci-app-ddns=y
 # CONFIG_PACKAGE_kmod-usb-uhci is not set
 
 # CONFIG_DEFAULT_luci-app-ipsec-vpnd is not set
+# CONFIG_PACKAGE_luci-app-nlbwmon is not set
 # CONFIG_DEFAULT_luci-app-nlbwmon is not set
 # CONFIG_DEFAULT_luci-app-unblockmusic is not set
 # CONFIG_DEFAULT_luci-app-vlmcsd is not set
