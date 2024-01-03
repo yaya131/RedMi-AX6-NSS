@@ -1,4 +1,4 @@
-#Redmi AX6和AX3600配置文件
+#Redmi AX6和AX3600通用配置文件
 CONFIG_TARGET_ipq807x=y
 CONFIG_TARGET_ipq807x_generic=y
 CONFIG_TARGET_ipq807x_generic_DEVICE_xiaomi_ax3600=y
